@@ -1,0 +1,13 @@
+#warcamp_hunter
+
+start_script ("support_grimswarm")
+start_script ("warcamp_highds")
+
+loop {
+start_script ("wander")
+wait_while { running?('wander') }
+start_script ("attack_grimswarm")
+wait_while { running?('attack_grimswarm') }
+#start_script ("loot_room")
+#wait_while { running?('loot_room') }
+}

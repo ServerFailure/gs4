@@ -1,0 +1,24 @@
+#DUSKRUIN__HEIST_HIGHDS
+
+loop {
+    line = get
+		#You thrust with a sleek elven framea at a heavy-jowled Silent Investor watchdog!
+	if line =~ /^You (?:.*) with (?:a|an) (?:.*) at (?:a|an) (.*)\!/
+    current_creature = $+
+		line = get
+		if line =~ /^  AS: +(?:.*) vs DS: (?:\-|\+)(.*) with AvD: (?:.*) \+ d100 roll: (?:.*) = (?:.*)/
+#       if line =~ /^  AS: +(?:.*) vs DS: (?:\-|\+)(.*) with AvD: (?:.*) \+ d100 roll: (?:.*) = (?:.*)/
+            creature_ds = $+.split.last
+            if creature_ds.to_i > 500
+                #puts("#{fam_window_begin}High DS Creature: #{current_creature} | DS(#{creature_ds})\r\n#{fam_window_end}")
+                Script.pause("attack_grimswarm")
+				waitrt?
+                waitcastrt?
+					fput "incant 917 fire" if (Spell[917].affordable?) and GameObj.npcs.first.name =~ /troll/ and !(GameObj.npcs.first.status =~ /dead|gone/) and (checkmana > 17)
+					fput "incant 917 ice" if (Spell[917].affordable?) and GameObj.npcs.first.name =~ /orc|giant/ and !(GameObj.npcs.first.status =~ /dead|gone/) and (checkmana > 17)
+				sleep 5
+                Script.unpause("attack_grimswarm")
+            end
+        end
+    end
+}

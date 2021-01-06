@@ -1,0 +1,655 @@
+#bandit_hunter
+
+if $frontend == 'stormfront'
+	fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+	fam_window_end   = "<popStream/>\r\n"
+else
+	fam_window_begin = "\034GSe\r\n"
+	fam_window_end   = "\034GSf\r\n"
+end
+
+$group = checkpcs.to_a		#This sets the group members to check for.
+
+start_script ("bandit_hunter_support")
+
+def sigils
+#Sigil of Offense
+	Spell[9707].cast if !Spell[9707].active? && Spell[9707].affordable? && Spell[9707].known?
+#Sigil of Defense
+	Spell[9708].cast if !Spell[9708].active? && Spell[9708].affordable? && Spell[9708].known?
+#Sigil of Concentration
+	Spell[9714].cast if !Spell[9714].active? && Spell[9714].affordable? && Spell[9714].known?
+#Sigil of Major Bane	
+	Spell[9715].cast if !Spell[9715].active? && Spell[9715].affordable? && Spell[9715].known?
+#Sigil of Major Protection
+	Spell[9719].cast if !Spell[9719].active? && Spell[9719].affordable? && Spell[9719].known?
+#Rapid Fire
+	Spell[515].cast if !Spell[515].active? && Spell[515].affordable? && Spell[515].known?
+end
+
+def spells
+	start_script("waggle", ['Alastir Erykk Devereux'])
+	wait_while { running?("waggle")}
+end
+
+def miu
+	go_home
+	start_script ("miu")
+	wait_while { running?("miu")}
+end
+
+def go_bandits
+
+	if $frontend == 'stormfront'
+		fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+		fam_window_end   = "<popStream/>\r\n"
+	else
+		fam_window_begin = "\034GSe\r\n"
+		fam_window_end   = "\034GSf\r\n"
+	end
+	
+	puts("#{fam_window_begin}I am going to find bandits.\r\n#{fam_window_end}")
+	fput "urchin guide guard"
+	sleep 0.2
+	start_script("go2", [ "29021", '_disable_confirm_' ])
+	wait_while { running?("go2")}
+	sigils
+end
+
+def go_guard
+
+	if $frontend == 'stormfront'
+		fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+		fam_window_end   = "<popStream/>\r\n"
+	else
+		fam_window_begin = "\034GSe\r\n"
+		fam_window_end   = "\034GSf\r\n"
+	end
+	
+	puts("#{fam_window_begin}I am going to the guard.\r\n#{fam_window_end}")
+	fput "urchin guide guard"
+	sleep 0.2
+	start_script("go2", [ "advguard", '_disable_confirm_' ]) unless Room.current.id == 28978
+	wait_while { running?("go2")}
+end	
+
+def go_guild
+
+	if checkright or checkleft
+		fput "store all"
+	end
+	if $frontend == 'stormfront'
+		fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+		fam_window_end   = "<popStream/>\r\n"
+	else
+		fam_window_begin = "\034GSe\r\n"
+		fam_window_end   = "\034GSf\r\n"
+	end
+	
+	if Room.current.id == 28927
+	else
+		fput "urchin guide bounty"
+		sleep 0.2
+		puts("#{fam_window_begin}I am going to the Adventurer's Guild.\r\n#{fam_window_end}")
+		start_script("go2", [ "advguild", '_disable_confirm_' ])
+		wait_while { running?("go2")}
+	end
+end
+
+def go_home
+
+	if $frontend == 'stormfront'
+		fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+		fam_window_end   = "<popStream/>\r\n"
+	else
+		fam_window_begin = "\034GSe\r\n"
+		fam_window_end   = "\034GSf\r\n"
+	end
+
+	puts("#{fam_window_begin}I am going to the resting room.\r\n#{fam_window_end}")
+	fput "urchin guide osatask" unless Room.current.id == 28950
+	sleep 0.2
+	start_script("go2", [ "#{Vars.restroom}", '_disable_confirm_' ])
+	wait_while { running?("go2")}
+	
+#	start_script("go2", [ "28916", '_disable_confirm_' ]) unless Room.current.id == 28916
+#	wait_while { running?("go2")}
+#	start_script("go2", [ "28950", '_disable_confirm_' ]) unless Room.current.id == 28950
+#	wait_while { running?("go2")}
+	spells
+end
+
+
+
+def deposit_check
+	if percentencumbrance > 10
+		fput "urchin guide bank"
+		sleep 0.2
+		start_script "go2", [ "bank", '_disable_confirm_' ]
+		wait_while { running?("go2")}
+		fput "deposit all"
+	end
+end
+
+def add_group
+	fput "ask taskmaster to add Erykk"
+	fput "ask taskmaster to add Devereux"
+end
+
+def confirm_task
+	result = dothistimeout "ask Luthrek about bounty", 3, /take out any bandits you encounter./
+	if result =~ /take out any bandits you encounter./
+	end
+	sleep 0.5
+end
+
+def rest
+	total_minutes = 0
+	loop {
+
+		if $frontend == 'stormfront'
+			fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+			fam_window_end   = "<popStream/>\r\n"
+		else
+			fam_window_begin = "\034GSe\r\n"
+			fam_window_end   = "\034GSf\r\n"
+		end
+
+		if checkmind == 'saturated'
+				puts("#{fam_window_begin}\r\nI have been resting for #{total_minutes} minutes.\r\n#{fam_window_end}")
+				sleep 60
+				total_minutes += 1
+		elsif checkmind == 'must rest'
+			break
+		else
+			break
+		end
+	
+#		if percentmind > 90
+#			puts("#{fam_window_begin}\r\nI have been resting for #{total_minutes} minutes.\r\n#{fam_window_end}")
+#			sleep 60
+#			total_minutes += 1
+#		else
+#			break
+#		end
+	}
+end
+
+def should_rest
+
+	if $frontend == 'stormfront'
+		fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+		fam_window_end   = "<popStream/>\r\n"
+	else
+		fam_window_begin = "\034GSe\r\n"
+		fam_window_end   = "\034GSf\r\n"
+	end
+
+	if checkmind == 'saturated'
+		puts("#{fam_window_begin}\r\nYour mind is full, it's time to rest.\r\n#{fam_window_end}")
+		go_home unless Room.current.id == 28937
+		rest
+	elsif checkmind == 'must rest'
+		puts("#{fam_window_begin}\r\nYour mind is not full, it's time to hunt!\r\n#{fam_window_end}")
+	else
+		puts("#{fam_window_begin}\r\nYour mind is not full, it's time to hunt!\r\n#{fam_window_end}")	
+	end
+
+#	if percentmind > 100
+#		puts("#{fam_window_begin}\r\nYour mind is full, it's time to rest.\r\n#{fam_window_end}")
+#		go_home
+#		rest
+#	else
+#		puts("#{fam_window_begin}\r\nYour mind is not full, it's time to hunt!\r\n#{fam_window_end}")
+#	end
+end
+
+def success_wait
+
+	if $frontend == 'stormfront'
+		fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+		fam_window_end   = "<popStream/>\r\n"
+	else
+		fam_window_begin = "\034GSe\r\n"
+		fam_window_end   = "\034GSf\r\n"
+	end
+
+	puts("#{fam_window_begin}I successfully completed the bandit bounty.\r\n#{fam_window_end}")
+	fput "store all"
+	sleep 2
+	deposit_check
+	go_home
+#	start_script("logic")
+	loop {
+		if Spell['Next Bounty'].active?
+			time = Spell['Next Bounty'].timeleft
+			total_time = time.round
+			puts("#{fam_window_begin}Resting for #{total_time} minutes until I can get a bounty.\r\n#{fam_window_end}")
+			sleep 60
+		else
+			should_rest
+			break
+		end
+	}
+end
+
+def turn_in_task
+
+	if $frontend == 'stormfront'
+		fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+		fam_window_end   = "<popStream/>\r\n"
+	else
+		fam_window_begin = "\034GSe\r\n"
+		fam_window_end   = "\034GSf\r\n"
+	end
+	
+#	puts("#{fam_window_begin}I am going to the Adventurer's Guild.\r\n#{fam_window_end}")
+#	start_script("go2", [ "advguild", '_disable_confirm_' ])
+#	wait_while { running?("go2")}
+	fput "ask taskmaster about bounty"
+	fput "lean"
+	sleep 0.5
+	success_wait
+end
+
+def get_bounty
+
+	if $frontend == 'stormfront'
+		fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+		fam_window_end   = "<popStream/>\r\n"
+	else
+		fam_window_begin = "\034GSe\r\n"
+		fam_window_end   = "\034GSf\r\n"
+	end
+	
+	#puts("#{fam_window_begin}I am asking the taskmaster for a bounty.\r\n#{fam_window_end}")
+	result = dothistimeout "ask taskmaster for bounty", 3, /Come back in about (.*) minutes if you want another task.|Come back in about a minute if you want another task.|The local gem dealer|It appears they have a bandit problem they'd like you to solve.|It appears they need your help in tracking down some kind of lost heirloom.|It appears they have a creature problem they'd like you to solve.|A certain client has hired us to provide a protective escort on (?:his|her) upcoming journey.|The local herbalist's assistant/
+	if result =~ /Come back in about (.*) minutes if you want another task./
+		go_home
+		success_wait
+	elsif result =~ /Come back in about a minute if you want another task./
+	elsif result =~ /It appears they have a bandit problem they'd like you to solve./
+		puts("#{fam_window_begin}This is a bandit bounty!\r\n#{fam_window_end}")
+		$alastir_complete = false
+		add_group
+#		respond "I received a bandit task."	
+	elsif result =~ /The local gem dealer/
+#		puts("#{fam_window_begin}I now have a gem bounty.\r\n#{fam_window_end}")
+#		respond "I received a gem bounty task."
+	elsif result =~ /It appears they need your help in tracking down some kind of lost heirloom./
+#		puts("#{fam_window_begin}This is an heirloom bounty, I am removing this bounty.\r\n#{fam_window_end}")
+#		sleep 0.3
+#		multifput "ask taskmaster about removal", "ask taskmaster about removal"
+#		get_bounty
+	elsif result =~ /It appears they have a creature problem they'd like you to solve./
+#		puts("#{fam_window_begin}This is a creature bounty, I am removing this bounty.\r\n#{fam_window_end}")
+#		sleep 0.3
+#		multifput "ask taskmaster about removal", "ask taskmaster about removal"
+#		get_bounty
+	elsif result =~ /A certain client has hired us to provide a protective escort on (?:his|her) upcoming journey./
+#		puts("#{fam_window_begin}This is an escort bounty, I am removing this bounty.\r\n#{fam_window_end}")
+#		sleep 0.3
+#		multifput "ask taskmaster about removal", "ask taskmaster about removal"
+#		get_bounty
+	elsif result =~ /The local herbalist's assistant/
+#		puts("#{fam_window_begin}This is an herb bounty, I am removing this bounty.\r\n#{fam_window_end}")
+#		sleep 0.3
+#		multifput "ask taskmaster about removal", "ask taskmaster about removal"
+#		get_bounty
+	end
+	sleep 0.5
+end
+
+def bandit_bounty_check
+	result = checkbounty
+	if result =~ /You have been tasked to suppress bandit activity/
+	else
+		script.kill
+	end
+end
+
+def turn_in_check
+
+	if $frontend == 'stormfront'
+		fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+		fam_window_end   = "<popStream/>\r\n"
+	else
+		fam_window_begin = "\034GSe\r\n"
+		fam_window_end   = "\034GSf\r\n"
+	end
+	
+	result = checkbounty
+	if result =~ /You have been tasked to suppress bandit activity/
+#		puts("#{fam_window_begin}I have a bandit task, let's go hunting!\r\n#{fam_window_end}")
+#		go_bandits
+#		attack_banditos
+	elsif result =~ /It appears they have a bandit problem they'd like you to solve./
+#		add_group
+#		go_guard
+#		confirm_task
+	elsif result =~ /You succeeded in your task and should report back to the sentry just outside town./
+		go_guard
+		confirm_task
+	elsif result =~ /You have succeeded in your task and can return to the Adventurer's Guild to receive your reward./
+		#puts("#{fam_window_begin}I need to turn in this bounty to complete it.\r\n#{fam_window_end}")
+		should_rest
+		turn_in_task
+	elsif result =~ /You are not currently assigned a task./
+		go_guild
+		get_bounty
+	else
+		go_guild
+		sleep 0.3
+		#multifput "ask taskmaster about removal", "ask taskmaster about removal"
+		respond 'wtf'
+		script.pause
+		get_bounty
+	end
+end
+
+def watch_bandits
+	loop {
+
+		if $frontend == 'stormfront'
+			fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+			fam_window_end   = "<popStream/>\r\n"
+		else
+			fam_window_begin = "\034GSe\r\n"
+			fam_window_end   = "\034GSf\r\n"
+		end
+
+#		group = checkpcs.to_a
+#		group = group & checkpcs.to_a
+#		group.push(Char.name)
+		if ((checkpcs.to_a - $group).length > 0)
+			puts("#{fam_window_begin}Other people here!\r\n#{fam_window_end}")
+#			respond 'Other people here!'
+			break
+		end
+#		respond ('waiting for attack')
+		if GameObj.npcs.find { |npc| npc.type =~ /bandit/ }
+			puts("#{fam_window_begin}Found bandits!\r\n#{fam_window_end}")
+#				respond 'Found bandits!'
+				start_script ("attack_bandits")
+				wait_while { running?("attack_bandits") }
+				break
+		else
+			puts("#{fam_window_begin}No bandits found, waiting...\r\n#{fam_window_end}")
+#			respond 'No bandits found, waiting...'
+			sleep 3
+		end
+		if GameObj.npcs.find { |npc| npc.type =~ /bandit/ }
+			puts("#{fam_window_begin}Found bandits!\r\n#{fam_window_end}")
+#			respond 'Found bandits!'
+				start_script ("attack_bandits")
+				wait_while { running?("attack_bandits") }
+			break
+		else
+			puts("#{fam_window_begin}No bandits here!\r\n#{fam_window_end}")
+#			respond 'No bandits here!'
+			break
+		end
+	}
+end
+
+def check_status
+	result = LNet.get_data("Erykk", "bounty")
+	if result =~ /^You have been tasked to suppress bandit activity/
+		$erykk_complete = false
+	elsif result =~ /You succeeded in your task and should report back to the sentry just outside town.|You succeeded in your task and should report back to the sentry just outside Kraken's Fall./
+		$erykk_complete = true
+	elsif result =~ /You have been tasked to help Alastir suppress bandit activity/
+		$erykk_complete = false		
+	end
+	result = LNet.get_data("Devereux", "bounty")
+	if result =~ /^You have been tasked to suppress bandit activity/
+		$devereux_complete = false
+						#																				You succeeded in your task and should report back to the sentry just outside Kraken's Fall.
+	elsif result =~ /You succeeded in your task and should report back to the sentry just outside town.|You succeeded in your task and should report back to the sentry just outside Kraken's Fall./
+		$devereux_complete = true
+	elsif result =~ /You have been tasked to help Alastir suppress bandit activity/
+		$devereux_complete = false		
+	end
+	result = LNet.get_data("Alastir", "bounty")
+	if result =~ /^You have been tasked to suppress bandit activity/
+		$alastir_complete = false
+	elsif result =~ /You succeeded in your task and should report back to the sentry just outside town.|You succeeded in your task and should report back to the sentry just outside Kraken's Fall./
+		$alastir_complete = true
+	elsif result =~ /You have been tasked to help Alastir suppress bandit activity/
+		$alastir_complete = false		
+	end	
+end
+
+def attack_bandits
+
+	if $frontend == 'stormfront'
+		fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+		fam_window_end   = "<popStream/>\r\n"
+	else
+		fam_window_begin = "\034GSe\r\n"
+		fam_window_end   = "\034GSf\r\n"
+	end
+
+	result = checkbounty
+	if result =~ /You have been tasked to suppress bandit activity in Cliffwalk near Kraken's Fall./
+#		rooms = [ "29124", "29128", "29129", "29133" ]
+		rooms = [ "29124", "29128" ]
+	elsif result =~ /You have been tasked to suppress bandit activity near Widowmaker's Road near Kraken's Fall./
+		rooms = Array[ "29054", "29055" ]
+	elsif result =~ /You have been tasked to suppress bandit activity in Muddy Village near Kraken's Fall./
+		rooms = Array[ "29047", "29049" ]
+	elsif result =~ /You have been tasked to suppress bandit activity in Black Weald near Kraken's Fall./
+		rooms = Array [ "29227", "29230" ]
+	end
+#	rooms = Array[ "29021", "29022", "29021", "29023", "29024", "29025", "29026", "29027", "29028", "29029", "29030", "29050", "29051", "29053", "29054", "29055", "29023" ]
+	
+	while $devereux_complete == false or $erykk_complete == false or $alastir_complete == false
+#	while $devereux_complete == false or $erykk_complete == false or $alastir_complete == false or $rylohk_complete == false
+		rooms.each { |room|
+			sigils
+#			check_status
+			
+			fput 'stance defensive' unless checkstance == 'defensive'
+			print.call 'moving to room ' + room.to_s
+			start_script 'go2', [room]
+			wait_while {running? ("go2")}
+
+			#watch_bandits
+	
+		10.times { 
+			break if ((checkpcs.to_a - $group).length > 0)	
+			break if GameObj.npcs.to_a.find_all { |npc| npc.type =~ /bandit/} != []
+			sleep 0.2
+		}
+	
+		while true
+			npcs = GameObj.npcs.to_a.find_all { |npc| npc.type =~ /bandit/ and npc.status !~ /dead/ }
+	
+			if npcs.empty?
+				break
+			else
+				waitrt?
+				waitcastrt?
+				start_script ("attack_bandits")
+				wait_while { running?("attack_bandits") }
+			end
+		end
+
+			while $devereux_complete == false or $erykk_complete == false or $alastir_complete == false
+#			while $devereux_complete == false or $erykk_complete == false or $alastir_complete == false or $rylohk_complete == false
+				npcs = GameObj.npcs.to_a.find_all { |npc| npc.type =~ /bandit/ and npc.status !~ /dead/ }
+				dead = GameObj.npcs.to_a.find_all { |npc| npc.type =~ /bandit/ and npc.status =~ /dead/ }
+
+                if npcs.empty? or GameObj.pcs.any?
+                    break
+                else
+                    waitrt?
+                    waitcastrt?
+
+                    if not dead.empty?
+                        start_script ("sloot")
+						wait_while { running?("sloot")}
+                    else
+                        start_script ("attack_bandits")
+                        wait_while { running?("attack_bandits") }
+						check_status
+                    end
+#                else
+#                    print.call('kill them all then unpause me!')
+#                    script.pause
+                end
+
+                sleep 0.1
+            end
+
+            break if $devereux_complete == true and $erykk_complete == true and $alastir_complete == true
+#            break if $devereux_complete == true and $erykk_complete == true and $alastir_complete == true and $rylohk_complete == true
+        }
+
+        #rooms.reverse!
+		
+		sleep 0.1
+	end
+end
+
+#def attack_bandits
+#	loop {
+#	#This is the main hunting loop.
+#	
+#	if $devereux_complete == false or $erykk_complete == false or $alastir_complete == false
+#		start_script ("wander")
+#		wait_while { running?('wander') }
+#		start_script ("attack_bandits")
+#		wait_while { running?('attack_bandits') }
+#	elsif $devereux_complete == true and $erykk_complete == true and $alastir_complete == true
+#		break
+#	else
+#	end
+#	}
+#end
+
+
+def attack_banditos
+	loop {
+		#This loop starts from bounty_check
+
+		if $frontend == 'stormfront'
+			fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+			fam_window_end   = "<popStream/>\r\n"
+		else
+			fam_window_begin = "\034GSe\r\n"
+			fam_window_end   = "\034GSf\r\n"
+		end
+
+		result = checkbounty
+		if result =~ /You have been tasked to suppress bandit activity/
+			$alastir_complete = false
+			puts("#{fam_window_begin}Bandit hunting time!\r\n#{fam_window_end}")
+			attack_bandits			#This is the main hunting loop, it will wander around until attacked, and then kill.
+		elsif result =~ /It appears they have a bandit problem they'd like you to solve./
+			break					#Something went wrong, and it needs to go the guard, so it breaks the look and returns to bounty_check.
+		elsif result =~ /You have succeeded/
+			puts("#{fam_window_begin}I need to turn in this bounty to complete it.\r\n#{fam_window_end}")
+			puts("#{fam_window_begin}Let's see if the team is finished.\r\n#{fam_window_end}")
+=begin
+			if $devereux_complete == true
+				puts("#{fam_window_begin}Devereux has finished.\r\n#{fam_window_end}")
+				if $erykk_complete == true
+					puts("#{fam_window_begin}Erykk has finished.\r\n#{fam_window_end}")
+				else
+					puts("#{fam_window_begin}Erykk has NOT finished.\r\n#{fam_window_end}")
+				end
+			elsif $devereux_complete == false
+				puts("#{fam_window_begin}Devereux has NOT finished.\r\n#{fam_window_end}")
+			end
+
+			if $erykk_complete == true
+				puts("#{fam_window_begin}Erykk has finished.\r\n#{fam_window_end}")
+				if $devereux_complete == true
+					puts("#{fam_window_begin}Devereux has finished.\r\n#{fam_window_end}")
+				else
+				end
+			elsif $erykk_complete == false
+				puts("#{fam_window_begin}Erykk has NOT finished.\r\n#{fam_window_end}")
+			end
+=end
+		elsif result =~ /You are not currently assigned a task./
+			puts("#{fam_window_begin}This should not happen?\r\n#{fam_window_end}")
+			break					#This breaks the loop, and returns to bounty_check
+			#go_guild
+			#get_bounty
+		else
+			puts("#{fam_window_begin}I don't know what's happening.\r\n#{fam_window_end}")
+			break
+#			go_guild
+#			sleep 0.3
+#			multifput "ask taskmaster about removal", "ask taskmaster about removal"
+#			respond 'wtf'
+#			script.pause
+#			get_bounty
+		end
+	}
+end
+
+
+
+def bounty_check
+
+	if $frontend == 'stormfront'
+		fam_window_begin = "<pushStream id=\"loot\" ifClosedStyle=\"watching\"/>"
+		fam_window_end   = "<popStream/>\r\n"
+	else
+		fam_window_begin = "\034GSe\r\n"
+		fam_window_end   = "\034GSf\r\n"
+	end
+	
+	result = checkbounty
+	if result =~ /You have been tasked to suppress bandit activity/
+		puts("#{fam_window_begin}I have a bandit task, should we hunt?\r\n#{fam_window_end}")
+		should_rest			#Checks experience level > 90 = rest
+		puts("#{fam_window_begin}I have a bandit task, it's time to hunt!\r\n#{fam_window_end}")
+			fput "gird"
+			sleep 0.5
+		go_bandits			#Goes to bandits area
+		attack_banditos		#Starts the hunting sequence
+	elsif result =~ /It appears they have a bandit problem they'd like you to solve./
+		puts("#{fam_window_begin}I have a bandit task, let's go confirm with the guard!\r\n#{fam_window_end}")
+#		add_group
+		go_guard			#Goes to sentry Luthrek
+		confirm_task		#Asks sentry Luthrek for bounty
+		miu
+	elsif result =~ /You succeeded in your task and should report back to the sentry just outside town./
+		puts("#{fam_window_begin}I completed a bandit task, let's go confirm with the guard!\r\n#{fam_window_end}")
+		go_guard			#Goes to sentry Luthrek
+		confirm_task		#Asks sentry Luthrek for bounty
+	elsif result =~ /You have succeeded in your task and can return to the Adventurer's Guild to receive your reward./
+		puts("#{fam_window_begin}I need to turn in this bounty to complete it.\r\n#{fam_window_end}")
+		go_guild			#Goes to the adventurers guild
+		turn_in_task		#Asks taskmaster for bounty, starts success_wait (stores all, deposits, goes home, rests)
+	elsif result =~ /You are not currently assigned a task./
+		puts("#{fam_window_begin}I need a task!\r\n#{fam_window_end}")
+		go_guild			#Goes to the adventurers guild
+		get_bounty			#Asks taskmaster for bounty
+	else
+		puts("#{fam_window_begin}This should not happen!\r\n#{fam_window_end}")
+		script.pause
+#		go_guild
+#		sleep 0.3
+#		multifput "ask taskmaster about removal", "ask taskmaster about removal"
+#		respond 'wtf'
+#		script.pause
+#		get_bounty
+	end
+end
+
+
+#Main Loop
+
+puts("#{fam_window_begin}Bandit Hunter script has been activated!\r\n#{fam_window_end}")
+
+loop {
+#	deposit_check		#If encumbered, goes to the bank and deposits.
+#	turn_in_check		#Turns in a completed bounty, or gets a bounty.
+	bounty_check
+#	should_rest
+}

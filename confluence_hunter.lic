@@ -1,0 +1,13 @@
+#confluence_hunter
+
+start_script ("support_confluence")
+start_script ("support_briefcombat")
+
+loop {
+start_script ("wander")
+wait_while { running?('wander') }
+start_script ("attack_confluence")
+wait_while { running?('attack_confluence') }
+#start_script ("loot_room")
+#wait_while { running?('loot_room') }
+}

@@ -1,0 +1,22 @@
+#DISPEL_WATCH
+
+loop {
+    line = get
+	if line =~ /lashes out at you\, driving a thorn into your skin\!  You feel poison coursing through your veins\./
+		Script.pause("explorer")
+		waitrt?
+		waitcastrt?
+			fput "incant 917 fire" if (Spell[917].affordable?) and GameObj.npcs.first.name =~ /troll/ and !(GameObj.npcs.first.status =~ /dead|gone/) and (checkmana > 17)
+			fput "incant 917 ice" if (Spell[917].affordable?) and GameObj.npcs.first.name =~ /orc|giant/ and !(GameObj.npcs.first.status =~ /dead|gone/) and (checkmana > 17)
+		sleep 5
+		Script.unpause("explorer")
+	elsif line =~ /towards you and lashes out malevolently\.\.\./
+		Script.pause("explorer")
+		waitrt?
+		waitcastrt?
+			fput "incant 917 fire" if (Spell[917].affordable?) and GameObj.npcs.first.name =~ /troll/ and !(GameObj.npcs.first.status =~ /dead|gone/) and (checkmana > 17)
+			fput "incant 917 ice" if (Spell[917].affordable?) and GameObj.npcs.first.name =~ /orc|giant/ and !(GameObj.npcs.first.status =~ /dead|gone/) and (checkmana > 17)
+		sleep 5
+		Script.unpause("explorer")		
+	end
+}

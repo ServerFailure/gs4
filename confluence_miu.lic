@@ -1,0 +1,40 @@
+#confluence_miu
+
+
+def castspells()
+	#101
+	waitcastrt?
+	multifput "get light rod from my #{Vars.miusack}","raise my light rod","put light rod in my #{Vars.miusack}" if !Spell[101].active?
+	#107
+	waitcastrt?
+	multifput "get my deep rod from my #{Vars.miusack}","raise my deep rod","put deep rod in my #{Vars.miusack}" if !Spell[107].active?	
+	#211
+	waitcastrt?
+	multifput "get silver crystal from my #{Vars.miusack}","rub my silver crystal","put silver crystal in my #{Vars.miusack}" if !Spell[211].active?
+	#215
+	waitcastrt?
+	start_script ("215") if !Spell[215].active?
+	wait_while { running? '215' }
+	#602
+	waitcastrt?
+	multifput "get bright crystal from my #{Vars.miusack}","rub my bright crystal","put bright crystal in my #{Vars.miusack}" if !Spell[602].active?
+	#606
+	waitcastrt?
+	start_script ("606") if !Spell[606].active?
+	wait_while { running? '606' }
+	#1601
+	waitcastrt?
+	multifput "get shark fin from my #{Vars.miusack}","raise my shark fin","put shark fin in my #{Vars.miusack}" if !Spell[1601].active?
+	#1606
+	waitcastrt?
+	start_script ("1606") if !Spell[1606].active?
+	wait_while { running? '1606' }
+	#1712
+	waitcastrt?
+	#Provides too much DS!
+	#multifput "get small statue from my #{Vars.miusack}","rub my small statue","put small statue in my #{Vars.miusack}" if !Spell[1712].active?
+end
+
+empty_hands
+castspells
+fill_hands

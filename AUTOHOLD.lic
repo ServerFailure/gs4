@@ -1,0 +1,12 @@
+#Automated grouping.
+
+loop {
+	my_crew = ["Alastir", "Erykk", "Devereux", "Rylohk"]
+	#if line =~ /(#{my_crew.join("|")}) just arrived\./
+
+	line = get
+	if line =~ /(#{my_crew.join("|")}) just arrived./
+		person = $1
+		fput "hold #{person}"
+	end
+}

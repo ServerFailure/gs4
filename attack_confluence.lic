@@ -1,0 +1,149 @@
+#confluence_attack
+
+
+attack_stance = "offensive"
+defense_stance = "defensive"
+PRONE = /sleeping|webbed|stunned|kneeling|sitting|^lying|prone/
+spells = [ 401, 406, 414, 425, 430, 503, 507, 508, 509, 515, 520, 535, 540, 911, 913 ]
+target = GameObj.npcs.find{ |npc| npc.name =~ /elemental/ }
+count = 0
+
+if $frontend == 'stormfront'
+	fam_window_begin = "<pushStream id=\"speech\" ifClosedStyle=\"watching\"/>"
+	fam_window_end   = "<popStream/>\r\n"
+else
+	fam_window_begin = "\034GSe\r\n"
+	fam_window_end   = "\034GSf\r\n"
+end
+
+manacheck = proc {
+	if checkmana < 150
+		Spell[516].cast if !Spell[1708].active? and (Spell[9516].timeleft < 15) and (Spell[516].affordable?)
+	end
+}
+
+pccheck = proc {
+	if GameObj.pcs.size > 0
+		puts("#{fam_window_begin}Walking away from #{GameObj.pcs.size} people!\r\n#{fam_window_end}")
+		exit
+	end
+}
+
+npccheck = proc {
+	if GameObj.npcs.size > 3
+		puts("#{fam_window_begin}Walking away from #{GameObj.npcs.size} elementals!\r\n#{fam_window_end}")
+		exit
+	end
+}
+
+item_check = proc {
+	result = dothistimeout("inventory quantity", 2, /(.*) items found/)
+	if result =~ /(.*) items found/
+		count = $1.to_i
+		puts("#{fam_window_begin}Currently at #{count} items!\r\n#{fam_window_end}")
+		if count > 480 #Greater than
+			kill_script ("confluence_hunter")
+			start_script ("go2"), ['study']
+			wait_while { running? 'go2' }
+		elsif count < 480 #Less than	
+		end
+	end
+}
+
+loot = proc {
+	GameObj.npcs.each { |monster| fput "loot ##{monster.id}" if monster.status =~ /dead/ }
+	if GameObj.loot.any?
+		fput "loot room"
+		item_check.call
+	end
+}
+
+hazardcheck = proc {
+	if GameObj.loot.find { |loot| loot.name =~ /vortex/ }
+		puts("#{fam_window_begin}Walking away the vortex!\r\n#{fam_window_end}")
+		loot.call
+		exit
+	end
+}
+
+spellcheck = proc {
+		spells.each{ |i|
+			Spell[i].cast if !Spell[i].active? && Spell[i].affordable?
+		}
+}
+
+stand = proc {            
+		if not standing?
+
+                while not checkstance 'offensive'
+					waitrt?
+                    fput 'stance offensive'
+					sleep 0.10
+                end
+
+		waitrt?
+		fput "stand" until standing?
+		end
+}
+
+haste = proc{
+		if GameObj.npcs.size > 0
+			waitrt?
+			waitcastrt?
+			Spell[506].cast if Spell[506].affordable? unless Spell[506].active?
+		end
+}
+
+sigils = proc{
+#Sigil of Offense
+	Spell[9707].cast if !Spell[9707].active? && Spell[9707].affordable? && Spell[9707].known?
+#Sigil of Defense
+	Spell[9708].cast if !Spell[9708].active? && Spell[9708].affordable? && Spell[9708].known?
+#Sigil of Concentration
+	Spell[9714].cast if !Spell[9714].active? && Spell[9714].affordable? && Spell[9714].known?
+#Sigil of Major Bane	
+	Spell[9715].cast if !Spell[9715].active? && Spell[9715].affordable? && Spell[9715].known?
+#Sigil of Major Protection
+	Spell[9719].cast if !Spell[9719].active? && Spell[9719].affordable? && Spell[9719].known?
+}
+
+run_once = proc {
+	pccheck.call		#Flees from other people
+#	hazardcheck.call	#Flees from vortex
+	npccheck.call		#Flees from > 2
+	manacheck.call  	#Casts 516 < 150 mana
+}
+
+## MAIN LOOP
+run_once.call
+
+loop {
+	haste.call			#Keeps haste active
+	sigils.call			#Casts any missing sigils
+	stand.call
+	fput "stance #{attack_stance}" if checkstance != attack_stance
+	result = dothistimeout("attack", 2, /You thrust|Your attack passes harmlessly through thin air|You strike|You currently have no valid target./)
+	if result =~ /You thrust|Your attack passes harmlessly through thin air|You strike/
+		waitrt?
+	elsif result =~ /You currently have no valid target\./
+		break
+	elsif result =~ /Be at peace my child\, there is no need to fight here\./
+		break
+	else
+		break
+	end
+}
+
+loot.call
+
+if (Wounds.head != 0 or Wounds.reye != 0 or Wounds.leye != 0 or Wounds.neck != 0 or Wounds.abs != 0 or Wounds.lhand != 0 or Wounds.rhand != 0 or Wounds.larm != 0 or Wounds.rarm != 0 or Wounds.chest != 0 or Wounds.back != 0 or Wounds.rleg != 0 or Wounds.lleg != 0 or Wounds.nerves != 0)
+	start_script ('useherbs'), ['in my kit']
+	wait_while { running? 'useherbs' }
+elsif (Scars.head != 0 or Scars.reye != 0 or Scars.leye != 0 or Scars.neck != 0 or Scars.abs != 0 or Scars.lhand != 0 or Scars.rhand != 0 or Scars.larm != 0 or Scars.rarm != 0 or Scars.chest != 0 or Scars.back != 0 or Scars.rleg != 0 or Scars.lleg != 0 or Scars.nerves != 0)
+	start_script ('useherbs'), ['in my kit']
+	wait_while { running? 'useherbs' }
+else
+	puts("#{fam_window_begin}Not hurt!\r\n#{fam_window_end}")
+end
+
+spellcheck.call		#Casts any missing spells

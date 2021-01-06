@@ -1,0 +1,63 @@
+#SoS
+
+target = GameObj.npcs.find{ |npc| npc.name =~ /sentinel|lurk|monstrosity|shaper/ }
+attack_stance = "offensive"
+defense_stance = "defensive"
+
+current_knockdown_routine = nil
+list_of_targets_a = /shaper/
+list_of_target_b = /sentinel|lurk|monstrosity/
+routine_a = [917]
+routine_b = [410]
+
+if target.name =~ list_of_targets_a
+	current_knockdown_routine = routine_a
+	current_knockdown_routine = routine_b	
+end
+
+haste = proc{
+		Spell[506].cast if Spell[506].affordable? unless Spell[506].active?
+}
+
+knockdown = proc{
+		current_knockdown_routine.each { |i|
+		waitrt?
+		waitcastrt?
+		Spell[i].cast
+	}
+}
+
+stand = proc {            
+		if not standing?
+
+                while not checkstance 'offensive'
+                    fput 'stance offensive'
+					sleep 0.10
+                end
+
+		fput "stand" until standing?
+		end
+}
+
+until target.status =~ /dead|gone/
+	stand.call
+	haste.call
+	waitrt?
+	waitcastrt?
+	fput "stance #{attack_stance}" if checkstance != attack_stance
+	if target.status =~ /prone|sit|lay|kneel|stun|sleep|rooted|frozen/
+		echo target.status
+		result = dothistimeout "attack ##{target.id}", 1, /A clean miss|and hit|the attack/
+			if result =~ /A clean miss/
+				knockdown.call
+			elsif result =~ /and hit|the attack/
+				nil
+			end
+	else
+		knockdown.call
+	end
+end
+waitrt?
+fput "stance #{defense_stance}" if checkstance != defense_stance
+start_script("sloot") unless running?("sloot")
+wait_while { running? 'sloot' }

@@ -1,0 +1,36 @@
+#Bandit_hunter_support
+
+no_pause_all
+no_kill_all
+hide_me
+
+if $frontend == 'stormfront'
+	fam_window_begin = "<pushStream id=\"speech\" ifClosedStyle=\"watching\"/>"
+	fam_window_end   = "<popStream/>\r\n"
+else
+	fam_window_begin = "\034GSe\r\n"
+	fam_window_end   = "\034GSf\r\n"
+end
+
+loop {
+while line = get
+	if line =~ /The Sea Hag's Roost, Tavern/
+		if Room.current.id == 28950 and checkbounty =~ /You are not currently assigned a task./
+			start_script ("silvers")
+			kill_script ("signore")
+			start_script("waggle",['Alastir Devereux Erykk'])
+			wait_while { running?("waggle")}
+			start_script ('herbheal')
+			wait_while { running?("herbheal")}
+			start_script ('go2') , ["28950"]
+			wait_while { running?("go2")}				
+			fput "join #{Vars.groupleader}"
+		end
+	elsif line =~ /slices deep into your vocal cords!|All you manage to do is cough up some blood./
+		start_script ("herbmaster"), ['in my kit']
+		wait_while { running?("herbmaster")}
+	elsif line =~ /You can't think clearly enough to prepare a spell!/
+		Spell[9716].cast if Spell[9716].affordable?
+	end
+end
+}

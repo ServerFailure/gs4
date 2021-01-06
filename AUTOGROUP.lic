@@ -1,0 +1,21 @@
+#JOIN
+
+no_kill_all
+no_pause_all
+
+loop {
+
+	my_crew = ["Alastir", "Erykk", "Devereux", "Rylohk"]
+	#if line =~ /(#{my_crew.join("|")}) just arrived\./
+	line = get
+	if line =~ /(#{my_crew.join("|")}) tried to join your group, but your group status is closed./
+		person = $1
+		fput "hold #{person}"
+	elsif line =~ /(#{my_crew.join("|")}) tried to hold your hand, but your group status is closed./
+		person = $1
+		fput "join #{person}"
+	elsif line =~ /(#{my_crew.join("|")}) tried to hold your hand, but you are a member/
+		person = $1
+		fput "join #{person}"
+	end
+}

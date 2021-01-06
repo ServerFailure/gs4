@@ -1,0 +1,454 @@
+#attack_grimswarm
+
+attack_stance = "offensive"
+defense_stance = "defensive"
+PRONE = /sleeping|webbed|stunned|kneeling|sitting|^lying|prone/
+spells = [ 401, 406, 414, 425, 430, 503, 507, 508, 509, 520, 535, 540, 905, 911, 913 ]
+target = GameObj.npcs.find{ |npc| npc.type =~ /bandit/ }
+
+if $frontend == 'stormfront'
+	fam_window_begin = "<pushStream id=\"speech\" ifClosedStyle=\"watching\"/>"
+	fam_window_end   = "<popStream/>\r\n"
+else
+	fam_window_begin = "\034GSe\r\n"
+	fam_window_end   = "\034GSf\r\n"
+end
+
+manacheck = proc {
+	if checkmana < 150
+		Spell[516].cast if !Spell[1708].active? and (Spell[9516].timeleft < 15) and (Spell[516].affordable?)
+	end
+}
+
+pccheck = proc {
+#	if GameObj.pcs.size > 2
+#		puts("#{fam_window_begin}Walking away from #{GameObj.pcs.size} people!\r\n#{fam_window_end}")
+#		exit
+#	end
+}
+
+npccheck = proc {
+#	if GameObj.npcs.size > 10
+#		puts("#{fam_window_begin}Walking away from #{GameObj.npcs.size} grimswarm!\r\n#{fam_window_end}")
+#		exit
+#	end
+}
+
+spellcheck = proc {
+		spells.each{ |i|
+			Spell[i].cast if !Spell[i].active? && Spell[i].affordable?
+		}
+}
+
+sigils = proc{
+#Sigil of Offense
+	Spell[9707].cast if !Spell[9707].active? && Spell[9707].affordable? && Spell[9707].known?
+#Sigil of Defense
+	Spell[9708].cast if !Spell[9708].active? && Spell[9708].affordable? && Spell[9708].known?
+#Sigil of Concentration
+	Spell[9714].cast if !Spell[9714].active? && Spell[9714].affordable? && Spell[9714].known?
+#Sigil of Major Bane	
+	Spell[9715].cast if !Spell[9715].active? && Spell[9715].affordable? && Spell[9715].known?
+#Sigil of Major Protection
+	Spell[9719].cast if !Spell[9719].active? && Spell[9719].affordable? && Spell[9719].known?
+#Rapid Fire
+	Spell[515].cast if !Spell[515].active? && Spell[515].affordable? && Spell[515].known?
+}
+
+stand = proc {            
+		if not standing?
+
+                while not checkstance 'offensive'
+					waitrt?
+                    fput 'stance offensive'
+					sleep 0.10
+                end
+
+		waitrt?
+		fput "stand" until standing?
+		end
+}
+
+haste = proc{
+		if GameObj.npcs.size > 0
+			waitrt?
+			waitcastrt?
+			Spell[506].cast if Spell[506].affordable? unless Spell[506].active?
+		end
+}
+
+=begin
+				npcs = GameObj.npcs.to_a.find_all { |npc| npc.type =~ /bandit/ and npc.status !~ /dead/ }
+				dead = GameObj.npcs.to_a.find_all { |npc| npc.type =~ /bandit/ and npc.status =~ /dead/ }
+
+                if npcs.empty? or GameObj.pcs.any?
+                    break
+                else
+                    waitrt?
+                    waitcastrt?
+
+                    if not dead.empty?
+                        start_script ("sloot")
+						wait_while { running?("sloot")}
+                    else
+                        start_script ("attack_bandits")
+                        wait_while { running?("attack_bandits") }
+                    end
+#                else
+#                    print.call('kill them all then unpause me!')
+#                    script.pause
+                end
+=end
+
+disable = proc {
+	target = GameObj.npcs.find{ |npc| npc.name =~ /bandit|brigand|highwayman|marauder|mugger|outlaw|robber|rogue|thief|thug/ and npc.status !~ /dead/}
+	if GameObj.npcs.any? { |npc| (npc.status != 'dead' or 'root' or 'rooted' or 'frozen') }
+		Spell[410].cast if Spell[410].affordable?
+#		Spell[512].cast if Spell[512].affordable?
+	end
+#		if Spell[909].active?
+#			if checkmana(5)
+#				fput "stomp" if target.status !~ /sleeping|webbed|stunned|kneeling|sitting|^lying|prone|frozen|dead|gone/
+#			end
+#		elsif !Spell[909].active?
+#			fput "incant 909" if checkmana(9)
+#			waitrt?
+#			waitcastrt?
+#			target = GameObj.npcs.find{ |npc| npc.name =~ // }
+#			if target.status !~ /dead|gone/
+#				if checkmana(5)
+#					fput "stomp" if target.status !~ /sleeping|webbed|stunned|kneeling|sitting|^lying|prone|frozen|dead|gone/
+#				end
+#			end
+#		end
+}
+
+loot = proc {
+	start_script('sloot') unless running?('sloot')
+	wait_while { running? 'sloot' }
+}
+
+run_once = proc {
+#	pccheck.call		#Flees from other people
+#	npccheck.call		#Flees from > 2
+	manacheck.call  	#Casts 516 < 150 mana
+}
+
+
+def check_status
+	result = LNet.get_data("Erykk", "bounty")
+	if result =~ /^You have been tasked to suppress bandit activity/
+		$erykk_complete = false
+	elsif result =~ /You succeeded in your task and should report back to the sentry just outside town.|You succeeded in your task and should report back to the sentry just outside Kraken's Fall./
+		$erykk_complete = true
+	elsif result =~ /You have been tasked to help Alastir suppress bandit activity/
+		$erykk_complete = false		
+	end
+	result = LNet.get_data("Devereux", "bounty")
+	if result =~ /^You have been tasked to suppress bandit activity/
+		$devereux_complete = false
+						#																				You succeeded in your task and should report back to the sentry just outside Kraken's Fall.
+	elsif result =~ /You succeeded in your task and should report back to the sentry just outside town.|You succeeded in your task and should report back to the sentry just outside Kraken's Fall./
+		$devereux_complete = true
+	elsif result =~ /You have been tasked to help Alastir suppress bandit activity/
+		$devereux_complete = false		
+	end
+	result = LNet.get_data("Alastir", "bounty")
+	if result =~ /^You have been tasked to suppress bandit activity/
+		$alastir_complete = false
+	elsif result =~ /You succeeded in your task and should report back to the sentry just outside town.|You succeeded in your task and should report back to the sentry just outside Kraken's Fall./
+		$alastir_complete = true
+	elsif result =~ /You have been tasked to help Alastir suppress bandit activity/
+		$alastir_complete = false		
+	end	
+end
+
+
+## MAIN LOOP
+run_once.call
+
+$devereux_ready = false
+$erykk_ready = false
+
+
+while true
+	npcs = GameObj.npcs.to_a.find_all { |npc| npc.type =~ /bandit/ and npc.status !~ /dead/ }
+	if npcs.empty?
+		break
+	else
+		waitrt?
+		waitcastrt?
+		sigils.call
+		stand.call
+		if $bandits_disabled == false
+			if GameObj.npcs.any? { |npc| (npc.status != 'dead' or not 'immobile' or not 'frozen' or not 'root' or not 'rooted')}
+				disable.call		#Disables before attack
+				$bandits_disabled = true
+			end
+		end
+		loot.call
+		if GameObj.targets.count > 1 and checkmana(18)
+			waitrt?
+			waitcastrt?
+			if checkmana > 18
+				fput "stance #{attack_stance}" if checkstance != attack_stance
+				multifput "prep 518","cast"
+			Spell[518].cast if Spell[518].affordable?
+			waitcastrt?
+			end
+			loot.call
+		else
+			haste.call			#Keeps haste active
+			fput "stance #{attack_stance}" if checkstance != attack_stance
+			result = dothistimeout("attack ##{target.id}", 2, /You thrust|Your attack passes harmlessly through thin air|You strike|You currently have no valid target.|What were you referring to?/)
+			if result =~ /You thrust|Your attack passes harmlessly through thin air|You strike/
+				waitrt?
+			elsif result =~ /You currently have no valid target\./
+				break
+			elsif result =~ /The thorny barrier surrounding/
+				waitrt?
+			elsif result =~ /Be at peace my child\, there is no need to fight here\./
+				break
+			elsif result =~ /What were you referring to?/
+				break
+			else
+				break
+			end
+		end
+	end
+	loot.call
+end
+
+
+while true
+	npcs = GameObj.npcs.to_a.find_all { |npc| npc.type =~ /bandit/ and npc.status !~ /dead/ }
+	if npcs.empty?
+		break
+	else
+		waitrt?
+		waitcastrt?
+		sigils.call
+		stand.call
+		if $bandits_disabled == false
+			if GameObj.npcs.any? { |npc| (npc.status != 'dead' or not 'immobile' or not 'frozen' or not 'root' or not 'rooted')}
+				disable.call		#Disables before attack
+				$bandits_disabled = true
+			end
+		end
+		loot.call
+		if GameObj.targets.count > 1 and checkmana(18)
+			waitrt?
+			waitcastrt?
+			if checkmana > 18
+				fput "stance #{attack_stance}" if checkstance != attack_stance
+				multifput "prep 518","cast"
+			Spell[518].cast if Spell[518].affordable?
+			waitcastrt?
+			end
+			loot.call
+		else
+			haste.call			#Keeps haste active
+			fput "stance #{attack_stance}" if checkstance != attack_stance
+			result = dothistimeout("attack ##{target.id}", 2, /You thrust|Your attack passes harmlessly through thin air|You strike|You currently have no valid target.|What were you referring to?/)
+			if result =~ /You thrust|Your attack passes harmlessly through thin air|You strike/
+				waitrt?
+			elsif result =~ /You currently have no valid target\./
+				break
+			elsif result =~ /The thorny barrier surrounding/
+				waitrt?
+			elsif result =~ /Be at peace my child\, there is no need to fight here\./
+				break
+			elsif result =~ /What were you referring to?/
+				break
+			else
+				break
+			end
+		end
+	end
+	loot.call
+end
+
+
+
+
+=begin
+
+
+loop {
+	sigils.call			#Casts any missing sigils
+	stand.call
+	if $bandits_disabled == false
+		if GameObj.npcs.any? { |npc| (npc.status != 'dead' or not 'immobile' or not 'frozen' or not 'root' or not 'rooted')}
+			disable.call		#Disables before attack
+			$bandits_disabled = true
+		end
+	end
+	loot.call
+	sleep 3
+	target = GameObj.npcs.find{ |npc| npc.type =~ /bandit/ }
+#	target = GameObj.npcs.find{ |npc| npc.name =~ /bandit|brigand|highwayman|marauder|mugger|outlaw|robber|rogue|thief|thug/ }
+	if target.status !~ /dead|gone/
+		if GameObj.targets.count > 1 and checkmana(18)
+			waitrt?
+			waitcastrt?
+			if checkmana > 18
+				fput "stance #{attack_stance}" if checkstance != attack_stance
+				multifput "prep 518","cast"
+			Spell[518].cast if Spell[518].affordable?
+			waitcastrt?
+			end
+		else
+			haste.call			#Keeps haste active
+			fput "stance #{attack_stance}" if checkstance != attack_stance
+			result = dothistimeout("attack ##{target.id}", 2, /You thrust|Your attack passes harmlessly through thin air|You strike|You currently have no valid target.|What were you referring to?/)
+			if result =~ /You thrust|Your attack passes harmlessly through thin air|You strike/
+				waitrt?
+			elsif result =~ /You currently have no valid target\./
+				break
+			elsif result =~ /The thorny barrier surrounding/
+				waitrt?
+			elsif result =~ /Be at peace my child\, there is no need to fight here\./
+				break
+			elsif result =~ /What were you referring to?/
+				break
+			else
+				break
+			end
+		end
+	else
+		loot.call
+		break
+		#respond 'Bandits dead?'
+	end
+}
+
+loop {
+	sigils.call			#Casts any missing sigils
+	stand.call
+	if $bandits_disabled == false
+		if GameObj.npcs.any? { |npc| (npc.status != 'dead' or not 'immobile' or not 'frozen' or not 'root' or not 'rooted')}
+			disable.call		#Disables before attack
+			$bandits_disabled = true
+		end
+	end
+	loot.call
+	target = GameObj.npcs.find{ |npc| npc.type =~ /bandit/ }
+#	target = GameObj.npcs.find{ |npc| npc.name =~ /bandit|brigand|highwayman|marauder|mugger|outlaw|robber|rogue|thief|thug/ }
+	if target.status !~ /dead|gone/
+		if GameObj.targets.count > 1 and checkmana(18)
+			waitrt?
+			waitcastrt?
+			if checkmana > 18
+				fput "stance #{attack_stance}" if checkstance != attack_stance
+				multifput "prep 518","cast"
+			Spell[518].cast if Spell[518].affordable?
+			waitcastrt?
+			end
+		else
+			haste.call			#Keeps haste active
+			fput "stance #{attack_stance}" if checkstance != attack_stance
+			result = dothistimeout("attack ##{target.id}", 2, /You thrust|Your attack passes harmlessly through thin air|You strike|You currently have no valid target.|What were you referring to?/)
+			if result =~ /You thrust|Your attack passes harmlessly through thin air|You strike/
+				waitrt?
+			elsif result =~ /You currently have no valid target\./
+				break
+			elsif result =~ /The thorny barrier surrounding/
+				waitrt?
+			elsif result =~ /Be at peace my child\, there is no need to fight here\./
+				break
+			elsif result =~ /What were you referring to?/
+				break
+			else
+				break
+			end
+		end
+	else
+		loot.call
+		break
+		#respond 'Bandits dead?'
+	end
+}
+
+sleep 2
+
+loop {
+	sigils.call			#Casts any missing sigils
+	stand.call
+	if $bandits_disabled == false
+		if GameObj.npcs.any? { |npc| (npc.status != 'dead' or not 'immobile' or not 'frozen' or not 'root' or not 'rooted')}
+			disable.call		#Disables before attack
+			$bandits_disabled = true
+		end
+	end
+	loot.call
+	target = GameObj.npcs.find{ |npc| npc.type =~ /bandit/ }
+#	target = GameObj.npcs.find{ |npc| npc.name =~ /bandit|brigand|highwayman|marauder|mugger|outlaw|robber|rogue|thief|thug/ }
+	if target.status !~ /dead|gone/
+		if GameObj.targets.count > 1 and checkmana(18)
+			waitrt?
+			waitcastrt?
+			if checkmana > 18
+				fput "stance #{attack_stance}" if checkstance != attack_stance
+				multifput "prep 518","cast"
+			Spell[518].cast if Spell[518].affordable?
+			waitcastrt?
+			end
+		else
+			haste.call			#Keeps haste active
+			fput "stance #{attack_stance}" if checkstance != attack_stance
+			result = dothistimeout("attack ##{target.id}", 2, /You thrust|Your attack passes harmlessly through thin air|You strike|You currently have no valid target.|What were you referring to?/)
+			if result =~ /You thrust|Your attack passes harmlessly through thin air|You strike/
+				waitrt?
+			elsif result =~ /You currently have no valid target\./
+				break
+			elsif result =~ /The thorny barrier surrounding/
+				waitrt?
+			elsif result =~ /Be at peace my child\, there is no need to fight here\./
+				break
+			elsif result =~ /What were you referring to?/
+				break
+			else
+				break
+			end
+		end
+	else
+		loot.call
+		break
+		#respond 'Bandits dead?'
+	end
+}
+=end
+
+loot.call
+
+waitrt?
+fput "stance #{defense_stance}" if checkstance != defense_stance
+sleep 3
+$bandits_disabled = false
+
+=begin
+if (Wounds.head != 0 or Wounds.reye != 0 or Wounds.leye != 0 or Wounds.neck != 0 or Wounds.abs != 0 or Wounds.lhand != 0 or Wounds.rhand != 0 or Wounds.larm != 0 or Wounds.rarm != 0 or Wounds.chest != 0 or Wounds.back != 0 or Wounds.rleg != 0 or Wounds.lleg != 0 or Wounds.nerves != 0)
+	start_script ('herbmaster'), ['in my kit']
+	wait_while { running? 'herbmaster' }
+elsif (Scars.head != 0 or Scars.reye != 0 or Scars.leye != 0 or Scars.neck != 0 or Scars.abs != 0 or Scars.lhand != 0 or Scars.rhand != 0 or Scars.larm != 0 or Scars.rarm != 0 or Scars.chest != 0 or Scars.back != 0 or Scars.rleg != 0 or Scars.lleg != 0 or Scars.nerves != 0)
+	start_script ('herbmaster'), ['in my kit']
+	wait_while { running? 'herbmaster' }
+else
+	puts("#{fam_window_begin}Not hurt!\r\n#{fam_window_end}")
+end
+=end
+
+loop {
+	if $devereux_ready == true and $erykk_ready == true
+		break
+	else
+		respond "Waiting for Devereux and Erykk."
+		sleep 3
+		fput "stance defensive"
+	end
+}
+
+$devereux_ready = false
+$erykk_ready = false
+check_status
+exit
